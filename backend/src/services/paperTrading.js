@@ -67,16 +67,16 @@ async function getPortfolio(userId) {
     const [cashResult] = await db.query(`
       SELECT cash_balance FROM user_accounts WHERE user_id = ${userId}
     `);
-    const cash = cashResult.length > 0 ? cashResult[0].cash_balance : INITIAL_BALANCE;
+    const cash = cashResult.length > 0 ? Number(cashResult[0].cash_balance) : INITIAL_BALANCE;
     
     return {
       holdings,
-      totalValue,
-      totalCost,
-      totalPnL,
-      totalPnLPercent: totalCost > 0 ? (totalPnL / totalCost) * 100 : 0,
-      cash,
-      totalAssets: totalValue + cash
+      totalValue: Number(totalValue),
+      totalCost: Number(totalCost),
+      totalPnL: Number(totalPnL),
+      totalPnLPercent: totalCost > 0 ? Number((totalPnL / totalCost) * 100) : 0,
+      cash: Number(cash),
+      totalAssets: Number(totalValue) + Number(cash)
     };
   } catch (error) {
     console.error('Portfolio error:', error);

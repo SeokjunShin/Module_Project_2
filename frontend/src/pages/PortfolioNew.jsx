@@ -93,14 +93,15 @@ function Portfolio({ user }) {
   };
 
   const formatNumber = (num) => {
-    if (num === undefined || num === null) return '-';
-    return new Intl.NumberFormat('ko-KR').format(num);
+    if (num === undefined || num === null || isNaN(num)) return '-';
+    return new Intl.NumberFormat('ko-KR').format(Number(num));
   };
 
   const formatPercent = (num) => {
-    if (num === undefined || num === null) return '-';
-    const sign = num >= 0 ? '+' : '';
-    return `${sign}${num.toFixed(2)}%`;
+    if (num === undefined || num === null || isNaN(num)) return '-';
+    const n = Number(num);
+    const sign = n >= 0 ? '+' : '';
+    return `${sign}${n.toFixed(2)}%`;
   };
 
   const getPriceClass = (change) => {
@@ -137,25 +138,25 @@ function Portfolio({ user }) {
             <div className="summary-card total">
               <h3>총 자산</h3>
               <div className="card-value">
-                {formatNumber(portfolio.totalAssets?.toFixed(0))}원
+                {formatNumber(Math.floor(Number(portfolio.totalAssets || 0)))}원
               </div>
             </div>
             <div className="summary-card">
               <h3>평가 금액</h3>
               <div className="card-value">
-                {formatNumber(portfolio.totalValue?.toFixed(0))}원
+                {formatNumber(Math.floor(Number(portfolio.totalValue || 0)))}원
               </div>
             </div>
             <div className="summary-card">
               <h3>현금</h3>
               <div className="card-value">
-                {formatNumber(portfolio.cash?.toFixed(0))}원
+                {formatNumber(Math.floor(Number(portfolio.cash || 0)))}원
               </div>
             </div>
             <div className={`summary-card ${getPriceClass(portfolio.totalPnL)}`}>
               <h3>총 손익</h3>
               <div className="card-value">
-                {formatNumber(portfolio.totalPnL?.toFixed(0))}원
+                {formatNumber(Math.floor(Number(portfolio.totalPnL || 0)))}원
                 <span className="pnl-percent">
                   ({formatPercent(portfolio.totalPnLPercent)})
                 </span>
@@ -221,19 +222,19 @@ function Portfolio({ user }) {
                       </Link>
                     </td>
                     <td>{formatNumber(holding.quantity)}주</td>
-                    <td>${formatNumber(holding.avg_price?.toFixed(2))}</td>
-                    <td>${formatNumber(holding.currentPrice?.toFixed(2))}</td>
-                    <td>${formatNumber(holding.marketValue?.toFixed(2))}</td>
+                    <td>${formatNumber(Number(holding.avg_price || 0).toFixed(2))}</td>
+                    <td>${formatNumber(Number(holding.currentPrice || 0).toFixed(2))}</td>
+                    <td>${formatNumber(Number(holding.marketValue || 0).toFixed(2))}</td>
                     <td className={getPriceClass(holding.pnl)}>
-                      ${formatNumber(holding.pnl?.toFixed(2))}
+                      ${formatNumber(Number(holding.pnl || 0).toFixed(2))}
                     </td>
                     <td className={getPriceClass(holding.pnlPercent)}>
                       {formatPercent(holding.pnlPercent)}
                     </td>
                     <td>
                       <Link
-                        to={`/trade?symbol=${holding.symbol}`}
-                        className="btn btn-sm btn-primary"
+                        to={`/trade?symbol=${holding.symbol}&side=sell`}
+                        className="btn btn-sm btn-sell-action"
                       >
                         매도
                       </Link>
@@ -281,10 +282,10 @@ function Portfolio({ user }) {
                     </td>
                     <td>{order.order_type === 'market' ? '시장가' : '지정가'}</td>
                     <td>{formatNumber(order.qty)}주</td>
-                    <td>${formatNumber(order.price?.toFixed(2))}</td>
+                    <td>${formatNumber(Number(order.price || 0).toFixed(2))}</td>
                     <td>
                       {order.filled_price 
-                        ? `$${formatNumber(order.filled_price?.toFixed(2))}` 
+                        ? `$${formatNumber(Number(order.filled_price || 0).toFixed(2))}` 
                         : '-'
                       }
                     </td>
@@ -335,7 +336,7 @@ function Portfolio({ user }) {
                       {order.side === 'buy' ? '매수' : '매도'}
                     </td>
                     <td>{formatNumber(order.qty)}주</td>
-                    <td>${formatNumber(order.price?.toFixed(2))}</td>
+                    <td>${formatNumber(Number(order.price || 0).toFixed(2))}</td>
                     <td>
                       <button
                         className="btn btn-sm btn-danger"

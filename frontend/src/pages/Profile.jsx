@@ -13,6 +13,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 function Profile({ user }) {
   const [searchParams] = useSearchParams();
   const [profile, setProfile] = useState(null);
+  const [balance, setBalance] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -27,8 +28,21 @@ function Profile({ user }) {
   useEffect(() => {
     if (profileId) {
       loadProfile();
+      loadBalance();
     }
   }, [profileId]);
+
+  const loadBalance = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/api/v2/trade/balance?user_id=${profileId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setBalance(response.data);
+    } catch (error) {
+      console.error('Load balance error:', error);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -80,16 +94,25 @@ function Profile({ user }) {
     return <div className="loading"><div className="spinner"></div></div>;
   }
 
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '-';
+    return new Intl.NumberFormat('ko-KR').format(num);
+  };
+
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto' }}>
       <h1 style={{ marginBottom: '24px' }}>👤 프로필</h1>
       
-      {/* [A01] IDOR 힌트 */}
-      {profileId !== String(user.id) && (
-        <div className="alert alert-warning">
-          다른 사용자의 프로필을 보고 있습니다. (ID: {profileId})
+      {/* 예수금 정보 */}
+      <div className="card" style={{ background: 'linear-gradient(135deg, #1a472a 0%, #2d5a3d 100%)', marginBottom: '20px' }}>
+        <h3 className="card-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>💰 예수금</h3>
+        <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#4ade80', marginBottom: '8px' }}>
+          {balance ? `${formatNumber(Math.floor(balance.cash_balance))}원` : '로딩 중...'}
         </div>
-      )}
+        <p style={{ color: '#8b949e', fontSize: '14px' }}>
+          모의투자 가용 현금
+        </p>
+      </div>
       
       <div className="card">
         <h3 className="card-header">프로필 정보</h3>
@@ -179,32 +202,6 @@ function Profile({ user }) {
         </button>
       </div>
       
-      {/* IDOR 테스트 도구 */}
-      <div className="card" style={{ background: '#21262d' }}>
-        <h3 className="card-header">🔍 IDOR 테스트</h3>
-        <p style={{ marginBottom: '12px' }}>
-          다른 사용자의 프로필을 확인하려면 ID를 입력하세요.
-        </p>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input 
-            type="number" 
-            id="test-id" 
-            placeholder="User ID" 
-            style={{ width: '100px' }}
-          />
-          <button 
-            className="btn"
-            onClick={() => {
-              const testId = document.getElementById('test-id').value;
-              if (testId) {
-                window.location.href = `/profile?id=${testId}`;
-              }
-            }}
-          >
-            프로필 조회
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

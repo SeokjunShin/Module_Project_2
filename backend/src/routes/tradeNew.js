@@ -24,7 +24,7 @@ const authenticateToken = (req, res, next) => {
   try {
     // [A04: Cryptographic Failures] 간단한 JWT 파싱 (검증 약함)
     const jwt = require('jsonwebtoken');
-    const JWT_SECRET = 'super_secret_key_12345';
+    const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key_123';
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();

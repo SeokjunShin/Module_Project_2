@@ -15,8 +15,10 @@ function Trade({ user }) {
   const navigate = useNavigate();
   
   const [symbol, setSymbol] = useState(searchParams.get('symbol') || '');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
   const [quote, setQuote] = useState(null);
-  const [side, setSide] = useState('buy');
+  const [side, setSide] = useState(searchParams.get('side') || 'buy');
   const [orderType, setOrderType] = useState('market');
   const [quantity, setQuantity] = useState(1);
   const [limitPrice, setLimitPrice] = useState('');
@@ -25,11 +27,9 @@ function Trade({ user }) {
   const [message, setMessage] = useState(null);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
+    if (user) {
+      loadBalance();
     }
-    loadBalance();
   }, [user]);
 
   useEffect(() => {
@@ -75,12 +75,22 @@ function Trade({ user }) {
       if (res.ok) {
         const data = await res.json();
         if (data.length > 0) {
-          setSymbol(data[0].symbol);
+          setSearchResults(data.slice(0, 10)); // 최대 10개
+          setShowResults(true);
+        } else {
+          setSearchResults([]);
+          setShowResults(false);
         }
       }
     } catch (error) {
       console.error('Search error:', error);
     }
+  };
+
+  const selectSymbol = (selectedSymbol) => {
+    setSymbol(selectedSymbol);
+    setShowResults(false);
+    setSearchResults([]);
   };
 
   const calculateTotal = () => {
@@ -144,7 +154,13 @@ function Trade({ user }) {
   };
 
   if (!user) {
-    return null;
+    return (
+      <div className="trade-page">
+        <div className="alert alert-warning">
+          로그인이 필요합니다. <a href="/login">로그인</a>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -156,7 +172,9 @@ function Trade({ user }) {
         <div className="balance-info">
           <h3>💰 현금 잔고</h3>
           <div className="balance-amount">
-            {balance ? `${formatNumber(balance.cash_balance?.toFixed(0))}원` : '-'}
+            {balance && balance.cash_balance != null 
+              ? `${formatNumber(Math.floor(Number(balance.cash_balance)))}원` 
+              : '-'}
           </div>
         </div>
 
@@ -165,16 +183,36 @@ function Trade({ user }) {
           {/* 종목 검색 */}
           <div className="form-group">
             <label>종목</label>
-            <div className="symbol-input">
-              <input
-                type="text"
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                placeholder="심볼 입력 (예: AAPL)"
-              />
-              <button type="button" className="btn" onClick={searchSymbol}>
-                검색
-              </button>
+            <div className="symbol-input-wrapper">
+              <div className="symbol-input">
+                <input
+                  type="text"
+                  value={symbol}
+                  onChange={(e) => {
+                    setSymbol(e.target.value.toUpperCase());
+                    setShowResults(false);
+                  }}
+                  placeholder="심볼 입력 (예: AAPL)"
+                />
+                <button type="button" className="btn" onClick={searchSymbol}>
+                  검색
+                </button>
+              </div>
+              {/* 검색 결과 드롭다운 */}
+              {showResults && searchResults.length > 0 && (
+                <div className="search-results-dropdown">
+                  {searchResults.map((result, i) => (
+                    <div 
+                      key={i} 
+                      className="search-result-item"
+                      onClick={() => selectSymbol(result.symbol)}
+                    >
+                      <strong>{result.symbol}</strong>
+                      <span className="result-name">{result.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
