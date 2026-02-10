@@ -1,0 +1,19 @@
+# Production Dockerfile for Backend
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install --omit=dev
+
+# Copy application
+COPY . .
+
+# Create uploads directory
+RUN mkdir -p /app/uploads
+
+EXPOSE 5000
+
+# Use node directly in production
+CMD ["node", "src/index.js"]
