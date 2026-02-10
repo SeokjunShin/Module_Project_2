@@ -47,8 +47,8 @@ function PostDetail({ user }) {
     if (!confirm('게시글을 삭제하시겠습니까?')) return;
     
     try {
-      // [A01: IDOR] 게시글 소유자 검증 없이 삭제
-      await axios.delete(`${API_URL}/board/posts/${id}`);
+      // 작성자 또는 관리자만 삭제 가능
+      await axios.delete(`${API_URL}/board/posts/${id}?userId=${user?.id}&role=${user?.role}`);
       alert('삭제되었습니다.');
       navigate('/board');
     } catch (error) {
@@ -117,12 +117,13 @@ function PostDetail({ user }) {
           </div>
         )}
         
-        {/* 수정/삭제 버튼 */}
-        <div style={{ marginTop: '20px', display: 'flex', gap: '8px' }}>
-          {/* [A01] 권한 검증 없이 버튼 표시 - 누구나 수정/삭제 시도 가능 */}
-          <Link to={`/board/create?edit=${id}`} className="btn">수정</Link>
-          <button onClick={handleDelete} className="btn btn-danger">삭제</button>
-        </div>
+        {/* 수정/삭제 버튼 - 작성자 또는 관리자만 표시 */}
+        {user && (user.id === post.user_id || user.role === 'admin') && (
+          <div style={{ marginTop: '20px', display: 'flex', gap: '8px' }}>
+            <Link to={`/board/create?edit=${id}`} className="btn">수정</Link>
+            <button onClick={handleDelete} className="btn btn-danger">삭제</button>
+          </div>
+        )}
       </div>
       
       {/* 댓글 */}

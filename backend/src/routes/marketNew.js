@@ -206,7 +206,7 @@ router.post('/watchlist', async (req, res) => {
     await db.query(`
       INSERT INTO watchlist (user_id, symbol, name, created_at)
       VALUES (${user_id}, '${symbol}', '${name || symbol}', NOW())
-      ON DUPLICATE KEY UPDATE updated_at = NOW()
+      ON DUPLICATE KEY UPDATE name = VALUES(name)
     `);
     
     res.json({ message: '관심종목에 추가되었습니다' });

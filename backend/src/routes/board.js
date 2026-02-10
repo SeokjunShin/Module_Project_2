@@ -92,7 +92,12 @@ router.get('/posts/:id', async (req, res) => {
  */
 router.post('/posts', async (req, res) => {
   try {
-    const { userId, type, title, content } = req.body;
+    const { userId, type, title, content, role } = req.body;
+    
+    // 공지사항은 관리자만 작성 가능
+    if (type === 'notice' && role !== 'admin') {
+      return res.status(403).json({ error: '공지사항은 관리자만 작성할 수 있습니다' });
+    }
     
     // [A05: Stored XSS] HTML/스크립트 필터링 없음
     // [A05: SQL Injection]
@@ -138,13 +143,25 @@ router.put('/posts/:id', async (req, res) => {
 /**
  * DELETE /api/board/posts/:id
  * 게시글 삭제
- * [A01: Broken Access Control]
+ * 작성자 또는 관리자만 삭제 가능
  */
 router.delete('/posts/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const { userId, role } = req.query;
     
-    // [A01: IDOR] 게시글 소유자 검증 없음
+    // 게시글 조회
+    const [posts] = await db.query(`SELECT user_id FROM posts WHERE id = ${id}`);
+    if (posts.length === 0) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다' });
+    }
+    
+    // 작성자 또는 관리자만 삭제 가능
+    const postOwnerId = posts[0].user_id;
+    if (Number(userId) !== postOwnerId && role !== 'admin') {
+      return res.status(403).json({ error: '삭제 권한이 없습니다' });
+    }
+    
     await db.query(`DELETE FROM posts WHERE id = ${id}`);
     
     res.json({ message: 'Post deleted' });

@@ -83,7 +83,8 @@ function CreatePost({ user }) {
           userId: user?.id,
           type: formData.type,
           title: formData.title,
-          content: formData.content
+          content: formData.content,
+          role: user?.role
         });
         postId = response.data.postId;
       }
@@ -126,7 +127,7 @@ function CreatePost({ user }) {
             <div className="form-group">
               <label>게시판</label>
               <select name="type" value={formData.type} onChange={handleChange}>
-                <option value="notice">공지사항</option>
+                {user?.role === 'admin' && <option value="notice">공지사항</option>}
                 <option value="free">자유게시판</option>
                 <option value="qna">Q&A</option>
               </select>
