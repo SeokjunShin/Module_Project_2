@@ -71,9 +71,9 @@ docker-compose up --build
 
 | 역할 | 이메일 | 비밀번호 |
 |------|--------|----------|
-| 관리자 | admin@kis-trading.com | password123 |
+| 관리자 | admin@kis-trading.com | admin123!@# |
 | 일반사용자 | user1@example.com | password123 |
-| VIP사용자 | vip@example.com | password123 |
+| VIP사용자 | vip@example.com | vip2024! |
 
 ## 📱 서비스 IA (화면 구성)
 
