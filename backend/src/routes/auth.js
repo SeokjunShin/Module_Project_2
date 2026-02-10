@@ -148,10 +148,10 @@ router.get('/profile', async (req, res) => {
  */
 router.put('/profile', async (req, res) => {
   try {
-    const { id, name, email, role } = req.body;
+    const { id, name, email } = req.body;
     
-    // [A01: Privilege Escalation] role 필드 직접 수정 가능
-    const query = `UPDATE users SET name = '${name}', email = '${email}', role = '${role}' WHERE id = ${id}`;
+    // role 필드는 프로필 수정에서 제외 - 관리자 페이지에서만 변경 가능
+    const query = `UPDATE users SET name = '${name}', email = '${email}' WHERE id = ${id}`;
     await db.query(query);
     
     res.json({ message: 'Profile updated successfully' });

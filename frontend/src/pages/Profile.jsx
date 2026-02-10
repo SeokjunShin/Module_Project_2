@@ -149,16 +149,9 @@ function Profile({ user }) {
             />
           </div>
           
-          {/* [A01: Privilege Escalation] role 필드 직접 수정 가능 */}
           <div className="form-group">
-            <label>권한 (Role)</label>
-            <select name="role" value={formData.role} onChange={handleChange}>
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-            <p style={{ color: '#8b949e', fontSize: '12px', marginTop: '4px' }}>
-              ⚠️ 힌트: 이 필드를 수정하면 권한이 변경됩니다.
-            </p>
+            <label>권한</label>
+            <input type="text" value={profile?.role || ''} disabled />
           </div>
           
           <div className="form-group">
