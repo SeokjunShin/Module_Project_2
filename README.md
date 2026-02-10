@@ -165,7 +165,6 @@ docker-compose up --build
 
 - [OWASP Top 10 2025](https://owasp.org/Top10/)
 - [취약점 상세 가이드](./VULNERABILITIES.md)
-- [KIS Open API 문서](https://apiportal.koreainvestment.com/)
 
 ## ⚠️ 면책 조항
 
