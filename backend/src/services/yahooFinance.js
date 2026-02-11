@@ -8,6 +8,24 @@
 const YahooFinance = require('yahoo-finance2').default;
 const yahooFinance = new YahooFinance();
 
+// 환율 (USD 기준)
+const EXCHANGE_RATES = {
+  'KRW': 1350,    // 1 USD = 1350 KRW
+  'JPY': 150,     // 1 USD = 150 JPY
+  'EUR': 0.92,    // 1 USD = 0.92 EUR
+  'GBP': 0.79,    // 1 USD = 0.79 GBP
+  'CNY': 7.2,     // 1 USD = 7.2 CNY
+  'USD': 1
+};
+
+/**
+ * 통화를 USD로 변환
+ */
+function convertToUSD(price, currency) {
+  const rate = EXCHANGE_RATES[currency] || 1;
+  return price / rate;
+}
+
 /**
  * 종목 검색
  * @param {string} query - 검색어
@@ -51,21 +69,37 @@ async function getQuote(symbol) {
     
     const quote = await yahooFinance.quote(symbol);
     
+    // 원본 통화와 가격
+    const originalCurrency = quote.currency || 'USD';
+    const originalPrice = quote.regularMarketPrice;
+    
+    // USD로 환산
+    const priceUSD = convertToUSD(originalPrice, originalCurrency);
+    const changeUSD = convertToUSD(quote.regularMarketChange || 0, originalCurrency);
+    const previousCloseUSD = convertToUSD(quote.regularMarketPreviousClose || 0, originalCurrency);
+    const openUSD = convertToUSD(quote.regularMarketOpen || 0, originalCurrency);
+    const highUSD = convertToUSD(quote.regularMarketDayHigh || 0, originalCurrency);
+    const lowUSD = convertToUSD(quote.regularMarketDayLow || 0, originalCurrency);
+    const fiftyTwoWeekHighUSD = convertToUSD(quote.fiftyTwoWeekHigh || 0, originalCurrency);
+    const fiftyTwoWeekLowUSD = convertToUSD(quote.fiftyTwoWeekLow || 0, originalCurrency);
+    const marketCapUSD = convertToUSD(quote.marketCap || 0, originalCurrency);
+    
     return {
       symbol: quote.symbol,
       name: quote.shortName || quote.longName,
-      price: quote.regularMarketPrice,
-      change: quote.regularMarketChange,
+      price: Number(priceUSD.toFixed(2)),
+      change: Number(changeUSD.toFixed(2)),
       changePercent: quote.regularMarketChangePercent,
-      previousClose: quote.regularMarketPreviousClose,
-      open: quote.regularMarketOpen,
-      high: quote.regularMarketDayHigh,
-      low: quote.regularMarketDayLow,
+      previousClose: Number(previousCloseUSD.toFixed(2)),
+      open: Number(openUSD.toFixed(2)),
+      high: Number(highUSD.toFixed(2)),
+      low: Number(lowUSD.toFixed(2)),
       volume: quote.regularMarketVolume,
-      marketCap: quote.marketCap,
-      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
-      fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
-      currency: quote.currency,
+      marketCap: Number(marketCapUSD.toFixed(0)),
+      fiftyTwoWeekHigh: Number(fiftyTwoWeekHighUSD.toFixed(2)),
+      fiftyTwoWeekLow: Number(fiftyTwoWeekLowUSD.toFixed(2)),
+      currency: 'USD',  // 모든 가격은 USD로 변환됨
+      originalCurrency: originalCurrency,
       exchange: quote.exchange,
       marketState: quote.marketState,
       timestamp: new Date()
@@ -121,12 +155,16 @@ async function getChart(symbol, period = '1mo', interval = '1d') {
       return [];
     }
     
+    // 통화 확인 및 환율 적용
+    const currency = result.meta?.currency || 'USD';
+    const rate = EXCHANGE_RATES[currency] || 1;
+    
     return result.quotes.map(q => ({
       date: q.date,
-      open: q.open,
-      high: q.high,
-      low: q.low,
-      close: q.close,
+      open: q.open ? Number((q.open / rate).toFixed(2)) : null,
+      high: q.high ? Number((q.high / rate).toFixed(2)) : null,
+      low: q.low ? Number((q.low / rate).toFixed(2)) : null,
+      close: q.close ? Number((q.close / rate).toFixed(2)) : null,
       volume: q.volume
     })).filter(q => q.close !== null);
   } catch (error) {
