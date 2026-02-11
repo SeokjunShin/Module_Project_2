@@ -89,6 +89,18 @@ services:
     networks:
       - app-network
 
+  # ============================================
+  # 🎯 XSS Attacker Server (교육용)
+  # ============================================
+  attacker:
+    build:
+      context: ./attacker
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
