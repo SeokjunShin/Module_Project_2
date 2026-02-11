@@ -76,6 +76,13 @@ app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   console.log('Headers:', JSON.stringify(req.headers));
   console.log('Body:', JSON.stringify(req.body));  // 취약: 비밀번호 등 민감정보 로깅
+  
+  // 요청 로그 저장 (관리자 페이지에서 조회용)
+  const adminRoutes = require('./routes/admin');
+  if (adminRoutes.logRequest) {
+    adminRoutes.logRequest(req);
+  }
+  
   next();
 });
 

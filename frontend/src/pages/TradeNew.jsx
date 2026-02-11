@@ -173,7 +173,7 @@ function Trade({ user }) {
           <h3>💰 현금 잔고</h3>
           <div className="balance-amount">
             {balance && balance.cash_balance != null 
-              ? `${formatNumber(Math.floor(Number(balance.cash_balance)))}원` 
+              ? `$${formatNumber(Number(balance.cash_balance).toFixed(2))}` 
               : '-'}
           </div>
         </div>

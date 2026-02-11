@@ -107,7 +107,7 @@ function Profile({ user }) {
       <div className="card" style={{ background: 'linear-gradient(135deg, #1a472a 0%, #2d5a3d 100%)', marginBottom: '20px' }}>
         <h3 className="card-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>💰 예수금</h3>
         <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#4ade80', marginBottom: '8px' }}>
-          {balance ? `${formatNumber(Math.floor(balance.cash_balance))}원` : '로딩 중...'}
+          {balance ? `$${formatNumber(Number(balance.cash_balance).toFixed(2))}` : '로딩 중...'}
         </div>
         <p style={{ color: '#8b949e', fontSize: '14px' }}>
           모의투자 가용 현금

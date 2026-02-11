@@ -110,20 +110,20 @@ function Dashboard({ user }) {
           <div className="portfolio-summary">
             <div className="summary-card">
               <h3>총 자산</h3>
-              <div className="summary-value">{formatNumber(portfolio.totalAssets?.toFixed(0))}원</div>
+              <div className="summary-value">${formatNumber(portfolio.totalAssets?.toFixed(2))}</div>
             </div>
             <div className="summary-card">
               <h3>평가 금액</h3>
-              <div className="summary-value">{formatNumber(portfolio.totalValue?.toFixed(0))}원</div>
+              <div className="summary-value">${formatNumber(portfolio.totalValue?.toFixed(2))}</div>
             </div>
             <div className="summary-card">
               <h3>현금</h3>
-              <div className="summary-value">{formatNumber(portfolio.cash?.toFixed(0))}원</div>
+              <div className="summary-value">${formatNumber(portfolio.cash?.toFixed(2))}</div>
             </div>
             <div className={`summary-card ${getPriceClass(portfolio.totalPnL)}`}>
               <h3>총 손익</h3>
               <div className="summary-value">
-                {formatNumber(portfolio.totalPnL?.toFixed(0))}원
+                ${formatNumber(portfolio.totalPnL?.toFixed(2))}
                 <span className="pnl-percent">({formatPercent(portfolio.totalPnLPercent)})</span>
               </div>
             </div>

@@ -290,4 +290,154 @@ router.get('/system-info', adminCheck, async (req, res) => {
   }
 });
 
+/**
+ * 시스템 로그 저장용 버퍼
+ * [A09: Security Logging Failures] 로그 노출
+ */
+const systemLogs = [];
+const MAX_LOGS = 500;
+
+// 콘솔 로그 인터셉터
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+console.log = function(...args) {
+  const logEntry = {
+    id: Date.now() + Math.random(),
+    timestamp: new Date().toISOString(),
+    level: 'info',
+    message: args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+  };
+  systemLogs.unshift(logEntry);
+  if (systemLogs.length > MAX_LOGS) systemLogs.pop();
+  originalConsoleLog.apply(console, args);
+};
+
+console.error = function(...args) {
+  const logEntry = {
+    id: Date.now() + Math.random(),
+    timestamp: new Date().toISOString(),
+    level: 'error',
+    message: args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+  };
+  systemLogs.unshift(logEntry);
+  if (systemLogs.length > MAX_LOGS) systemLogs.pop();
+  originalConsoleError.apply(console, args);
+};
+
+console.warn = function(...args) {
+  const logEntry = {
+    id: Date.now() + Math.random(),
+    timestamp: new Date().toISOString(),
+    level: 'warn',
+    message: args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+  };
+  systemLogs.unshift(logEntry);
+  if (systemLogs.length > MAX_LOGS) systemLogs.pop();
+  originalConsoleWarn.apply(console, args);
+};
+
+/**
+ * GET /api/admin/system-logs
+ * 시스템 로그 조회
+ * [A09: Security Logging Failures] 민감 정보 포함 로그 노출
+ */
+router.get('/system-logs', adminCheck, async (req, res) => {
+  try {
+    const { level, search, limit = 100 } = req.query;
+    
+    let logs = [...systemLogs];
+    
+    // 레벨 필터
+    if (level && level !== 'all') {
+      logs = logs.filter(log => log.level === level);
+    }
+    
+    // 검색 필터 [A05: Injection possible via regex]
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      logs = logs.filter(log => regex.test(log.message));
+    }
+    
+    res.json({
+      total: logs.length,
+      logs: logs.slice(0, parseInt(limit)),
+      warning: '⚠️ These logs may contain sensitive information!'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
+/**
+ * GET /api/admin/request-logs
+ * HTTP 요청 로그 조회
+ * [A09] 모든 요청 정보 노출 (인증 토큰, 비밀번호 등)
+ */
+const requestLogs = [];
+const MAX_REQUEST_LOGS = 200;
+
+// 요청 로그 미들웨어를 위한 함수
+router.logRequest = (req) => {
+  const logEntry = {
+    id: Date.now() + Math.random(),
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    url: req.originalUrl || req.url,
+    ip: req.ip || req.connection?.remoteAddress,
+    userAgent: req.headers['user-agent'],
+    authorization: req.headers['authorization'],  // [A09] 토큰 노출
+    body: req.body,  // [A09] 비밀번호 등 민감 정보 노출
+    cookies: req.cookies
+  };
+  requestLogs.unshift(logEntry);
+  if (requestLogs.length > MAX_REQUEST_LOGS) requestLogs.pop();
+};
+
+router.get('/request-logs', adminCheck, async (req, res) => {
+  try {
+    const { method, search, limit = 50 } = req.query;
+    
+    let logs = [...requestLogs];
+    
+    if (method) {
+      logs = logs.filter(log => log.method === method.toUpperCase());
+    }
+    
+    if (search) {
+      logs = logs.filter(log => log.url.includes(search));
+    }
+    
+    res.json({
+      total: logs.length,
+      logs: logs.slice(0, parseInt(limit)),
+      warning: '⚠️ Request logs contain sensitive authentication data!'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/clear-logs
+ * 로그 삭제
+ */
+router.delete('/clear-logs', adminCheck, async (req, res) => {
+  try {
+    const { type } = req.query;
+    
+    if (type === 'system' || type === 'all') {
+      systemLogs.length = 0;
+    }
+    if (type === 'request' || type === 'all') {
+      requestLogs.length = 0;
+    }
+    
+    res.json({ message: 'Logs cleared successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

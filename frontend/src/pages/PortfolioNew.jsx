@@ -138,25 +138,25 @@ function Portfolio({ user }) {
             <div className="summary-card total">
               <h3>총 자산</h3>
               <div className="card-value">
-                {formatNumber(Math.floor(Number(portfolio.totalAssets || 0)))}원
+                ${formatNumber(Number(portfolio.totalAssets || 0).toFixed(2))}
               </div>
             </div>
             <div className="summary-card">
               <h3>평가 금액</h3>
               <div className="card-value">
-                {formatNumber(Math.floor(Number(portfolio.totalValue || 0)))}원
+                ${formatNumber(Number(portfolio.totalValue || 0).toFixed(2))}
               </div>
             </div>
             <div className="summary-card">
               <h3>현금</h3>
               <div className="card-value">
-                {formatNumber(Math.floor(Number(portfolio.cash || 0)))}원
+                ${formatNumber(Number(portfolio.cash || 0).toFixed(2))}
               </div>
             </div>
             <div className={`summary-card ${getPriceClass(portfolio.totalPnL)}`}>
               <h3>총 손익</h3>
               <div className="card-value">
-                {formatNumber(Math.floor(Number(portfolio.totalPnL || 0)))}원
+                ${formatNumber(Number(portfolio.totalPnL || 0).toFixed(2))}
                 <span className="pnl-percent">
                   ({formatPercent(portfolio.totalPnLPercent)})
                 </span>
