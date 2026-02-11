@@ -20,6 +20,7 @@ const marketRoutes = require('./routes/market');
 const adminRoutes = require('./routes/admin');
 const boardRoutes = require('./routes/board');
 const fileRoutes = require('./routes/file');
+const utilsRoutes = require('./routes/utils');
 
 // New Routes (Yahoo Finance + Paper Trading)
 const marketNewRoutes = require('./routes/marketNew');
@@ -88,6 +89,7 @@ app.use('/api/market', marketRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/board', boardRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/utils', utilsRoutes);
 
 // New Routes (Yahoo Finance + Paper Trading)
 app.use('/api/v2/market', marketNewRoutes);

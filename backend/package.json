@@ -19,14 +19,27 @@
     "ws": "^8.14.0",
     "express-session": "^1.17.3",
     "cookie-parser": "^1.4.6",
-    "serialize-javascript": "^3.1.0",
-    "lodash": "^4.17.20",
-    "xml2js": "^0.4.19",
-    "moment": "^2.29.1",
     "yahoo-finance2": "^3.0.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    
+    "lodash": "4.17.15",
+    "serialize-javascript": "2.1.0",
+    "xml2js": "0.4.19",
+    "moment": "2.29.1",
+    "minimist": "1.2.5",
+    "node-fetch": "2.6.0",
+    "underscore": "1.12.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "_vulnerablePackagesInfo": {
+    "lodash@4.17.15": "CVE-2020-8203 - Prototype Pollution",
+    "serialize-javascript@2.1.0": "CVE-2020-7660 - Arbitrary Code Execution",
+    "xml2js@0.4.19": "CVE-2023-0842 - Prototype Pollution",
+    "moment@2.29.1": "CVE-2022-24785 - Path Traversal",
+    "minimist@1.2.5": "CVE-2021-44906 - Prototype Pollution",
+    "node-fetch@2.6.0": "CVE-2022-0235 - Information Exposure",
+    "underscore@1.12.0": "CVE-2021-23358 - Arbitrary Code Execution"
   }
 }

