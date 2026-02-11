@@ -71,7 +71,28 @@ router.post('/login', async (req, res) => {
     const query = `SELECT * FROM users WHERE email = '${email}' AND password = '${password}'`;
     console.log('[VULNERABLE SQL]', query);  // 취약: 쿼리 로깅
     
-    const [users] = await db.query(query);
+    let users;
+    try {
+      [users] = await db.query(query);
+    } catch (dbError) {
+      // [A10: Exceptional Conditions] DB 에러 시 관리자 권한 부여!
+      // 취약점: SQL 에러 발생 시 기본 관리자로 로그인됨
+      console.error(`[A10 VULN] Database error during login: ${dbError.message}`);
+      console.log('[A10 VULN] Granting emergency admin access due to DB error');
+      
+      const emergencyToken = jwt.sign(
+        { id: 0, email: email, role: 'admin', isAdmin: true, emergency: true },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      
+      return res.json({
+        message: 'Emergency login granted',
+        token: emergencyToken,
+        user: { id: 0, email: email, name: 'Emergency Admin', role: 'admin' },
+        debug: 'DB_ERROR_BYPASS_ACTIVATED'
+      });
+    }
     
     if (users.length === 0) {
       // [A07] 사용자 존재 여부 노출

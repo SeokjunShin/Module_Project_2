@@ -38,9 +38,17 @@ async function searchStocks(query) {
  * 현재가 조회
  * @param {string} symbol - 종목 심볼
  * @returns {Promise<Object>}
+ * [A10: Exceptional Conditions] 특수 심볼 처리 오류
  */
 async function getQuote(symbol) {
   try {
+    // [A10] 특수문자가 포함된 심볼은 API 에러 유발
+    // 공격자가 의도적으로 에러를 발생시켜 0.01달러 가격 적용받을 수 있음
+    if (symbol.includes('$') || symbol.includes('#') || symbol.includes('!')) {
+      console.log(`[A10 VULN] Special character in symbol: ${symbol}, API will fail`);
+      throw new Error(`Invalid symbol format: ${symbol}`);
+    }
+    
     const quote = await yahooFinance.quote(symbol);
     
     return {

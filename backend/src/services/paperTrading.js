@@ -93,31 +93,49 @@ async function executeMarketOrder(userId, symbol, side, quantity) {
   
   try {
     // 현재가 조회
-    const quote = await yahooFinance.getQuote(symbol);
-    if (!quote || !quote.price) {
-      throw new Error('종목 시세를 조회할 수 없습니다.');
+    let price;
+    try {
+      const quote = await yahooFinance.getQuote(symbol);
+      if (!quote || !quote.price) {
+        // [A10: Exceptional Conditions] 시세 조회 실패 시 기본값 사용
+        // 취약점: 가격을 0.01로 설정하면 사실상 무료로 주식 구매 가능!
+        console.error(`[A10 VULN] Price lookup failed for ${symbol}, using fallback price`);
+        price = 0.01;
+      } else {
+        price = quote.price;
+      }
+    } catch (priceError) {
+      // [A10] API 에러 시에도 주문 진행 허용 - 0.01달러로!
+      console.error(`[A10 VULN] Price API error: ${priceError.message}, using $0.01`);
+      price = 0.01;
     }
-    
-    const price = quote.price;
     const totalAmount = price * quantity;
     
     // [A06] 트랜잭션 없이 잔고 확인 - Race Condition 취약
     // await connection.beginTransaction();  // 의도적으로 주석처리
     
     // 현금 잔고 확인
-    const [accounts] = await connection.query(`
-      SELECT cash_balance FROM user_accounts WHERE user_id = ${userId}
-    `);
-    
-    if (accounts.length === 0) {
-      // 계좌 없으면 생성
-      await connection.query(`
-        INSERT INTO user_accounts (user_id, cash_balance) VALUES (${userId}, ${INITIAL_BALANCE})
+    let cashBalance;
+    try {
+      const [accounts] = await connection.query(`
+        SELECT cash_balance FROM user_accounts WHERE user_id = ${userId}
       `);
-      accounts.push({ cash_balance: INITIAL_BALANCE });
+      
+      if (accounts.length === 0) {
+        // 계좌 없으면 생성
+        await connection.query(`
+          INSERT INTO user_accounts (user_id, cash_balance) VALUES (${userId}, ${INITIAL_BALANCE})
+        `);
+        cashBalance = INITIAL_BALANCE;
+      } else {
+        cashBalance = accounts[0].cash_balance;
+      }
+    } catch (balanceError) {
+      // [A10: Exceptional Conditions] 잔고 조회 실패 시 무제한 잔고로 처리
+      // 취약점: DB 에러 발생 시 모든 거래가 승인됨!
+      console.error(`[A10 VULN] Balance check failed: ${balanceError.message}, assuming unlimited`);
+      cashBalance = 999999999999;  // 무제한 잔고
     }
-    
-    const cashBalance = accounts[0].cash_balance;
     
     if (side === 'buy') {
       // 매수 - 잔고 확인
