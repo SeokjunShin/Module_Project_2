@@ -109,7 +109,15 @@ async function executeMarketOrder(userId, symbol, side, quantity) {
       console.error(`[A10 VULN] Price API error: ${priceError.message}, using $0.01`);
       price = 0.01;
     }
-    const totalAmount = price * quantity;
+    
+    // [A08: Software and Data Integrity Failures] 
+    // 취약점: 소수점 주문 시 반올림 오류
+    // 금액은 버림(floor) → 적게 지불
+    // 수량은 올림(ceil) → 많이 받음
+    // 예: 0.001주 × $150 = $0.15 → floor($0.15) = $0 지불, ceil(0.001) = 1주 지급!
+    const totalAmount = Math.floor(price * quantity);  // 금액은 버림
+    const creditQuantity = Math.ceil(quantity);         // 수량은 올림
+    console.log(`[A08 VULN] Rounding attack: pay $${totalAmount}, get ${creditQuantity} shares (requested ${quantity})`);
     
     // [A06] 트랜잭션 없이 잔고 확인 - Race Condition 취약
     // await connection.beginTransaction();  // 의도적으로 주석처리
@@ -143,21 +151,22 @@ async function executeMarketOrder(userId, symbol, side, quantity) {
         throw new Error(`잔고 부족: 필요 ${totalAmount.toLocaleString()}원, 보유 ${cashBalance.toLocaleString()}원`);
       }
       
-      // 현금 차감
+      // 현금 차감 (floor된 금액)
       await connection.query(`
         UPDATE user_accounts SET cash_balance = cash_balance - ${totalAmount} WHERE user_id = ${userId}
       `);
       
-      // 포트폴리오 업데이트
+      // 포트폴리오 업데이트 - [A08] ceil된 수량 지급!
       const [existing] = await connection.query(`
         SELECT id, quantity, total_cost FROM portfolio WHERE user_id = ${userId} AND symbol = '${symbol}'
       `);
       
       if (existing.length > 0) {
         // 기존 보유 종목 - 평균단가 재계산
-        const newQty = existing[0].quantity + quantity;
+        // [A08] creditQuantity(올림된 수량) 사용!
+        const newQty = existing[0].quantity + creditQuantity;
         const newCost = existing[0].total_cost + totalAmount;
-        const newAvgPrice = newCost / newQty;
+        const newAvgPrice = newQty > 0 ? newCost / newQty : 0;
         
         await connection.query(`
           UPDATE portfolio 
@@ -165,10 +174,10 @@ async function executeMarketOrder(userId, symbol, side, quantity) {
           WHERE id = ${existing[0].id}
         `);
       } else {
-        // 신규 매수
+        // 신규 매수 - [A08] creditQuantity(올림된 수량) 지급!
         await connection.query(`
           INSERT INTO portfolio (user_id, symbol, quantity, avg_price, total_cost, created_at, updated_at)
-          VALUES (${userId}, '${symbol}', ${quantity}, ${price}, ${totalAmount}, NOW(), NOW())
+          VALUES (${userId}, '${symbol}', ${creditQuantity}, ${price}, ${totalAmount}, NOW(), NOW())
         `);
       }
     } else {
@@ -206,7 +215,7 @@ async function executeMarketOrder(userId, symbol, side, quantity) {
     // 거래 내역 저장
     const [orderResult] = await connection.query(`
       INSERT INTO orders (user_id, symbol, side, order_type, qty, price, filled_qty, filled_price, status, created_at, filled_at)
-      VALUES (${userId}, '${symbol}', '${side}', 'market', ${quantity}, ${price}, ${quantity}, ${price}, 'filled', NOW(), NOW())
+      VALUES (${userId}, '${symbol}', '${side}', 'market', ${quantity}, ${price}, ${side === 'buy' ? creditQuantity : quantity}, ${price}, 'filled', NOW(), NOW())
     `);
     
     // await connection.commit();
@@ -215,11 +224,12 @@ async function executeMarketOrder(userId, symbol, side, quantity) {
       orderId: orderResult.insertId,
       symbol,
       side,
-      quantity,
+      requestedQuantity: quantity,
+      creditedQuantity: side === 'buy' ? creditQuantity : quantity,  // [A08] 실제 지급된 수량
       price,
-      totalAmount,
+      chargedAmount: totalAmount,  // [A08] 실제 차감된 금액
       status: 'filled',
-      message: `${side === 'buy' ? '매수' : '매도'} 체결 완료: ${symbol} ${quantity}주 @ ${price.toLocaleString()}원`
+      message: `${side === 'buy' ? '매수' : '매도'} 체결 완료: ${symbol} ${side === 'buy' ? creditQuantity : quantity}주 @ $${price.toFixed(2)}`
     };
   } catch (error) {
     // await connection.rollback();

@@ -54,10 +54,17 @@ router.post('/order', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: '유효하지 않은 주문 유형입니다' });
     }
     
-    // [A08: Software and Data Integrity Failures]
-    // 취약점: 음수 수량 검증 없음 - 음수로 매도하면 돈이 증가함!
-    // 원래 코드: if (quantity <= 0) { return res.status(400).json({ error: '수량은 0보다 커야 합니다' }); }
-    // 공격: quantity=-100으로 sell하면 주식 없이 돈이 들어옴
+    if (quantity <= 0) {
+      return res.status(400).json({ error: '수량은 0보다 커야 합니다' });
+    }
+    
+    // [A08: Software and Data Integrity Failures] 
+    // 취약점: 소수점 수량 허용 + 반올림 오류
+    // 0.001주 매수 시 금액은 $0.15인데 Math.floor로 $0 차감
+    // 하지만 수량은 Math.ceil로 1주 지급!
+    // 공격: 0.001주씩 1000번 주문하면 $0 지불하고 1000주 획득!
+    const processedQuantity = parseFloat(quantity);
+    console.log(`[A08 VULN] Fractional order: ${processedQuantity} shares of ${symbol}`);
     
     // [A06: Insecure Design] 주문 금액/수량 제한 없음
     // [A06] Rate limiting 없음 - 과다 주문 가능
@@ -66,7 +73,7 @@ router.post('/order', authenticateToken, async (req, res) => {
     
     if (orderType === 'market') {
       // 시장가 주문 - 즉시 체결
-      result = await paperTrading.executeMarketOrder(userId, symbol, side, quantity);
+      result = await paperTrading.executeMarketOrder(userId, symbol, side, processedQuantity);
     } else {
       // 지정가 주문 - 조건 충족 시 체결
       if (!limitPrice || limitPrice <= 0) {
