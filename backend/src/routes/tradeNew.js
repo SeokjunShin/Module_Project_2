@@ -54,9 +54,10 @@ router.post('/order', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: '유효하지 않은 주문 유형입니다' });
     }
     
-    if (quantity <= 0) {
-      return res.status(400).json({ error: '수량은 0보다 커야 합니다' });
-    }
+    // [A08: Software and Data Integrity Failures]
+    // 취약점: 음수 수량 검증 없음 - 음수로 매도하면 돈이 증가함!
+    // 원래 코드: if (quantity <= 0) { return res.status(400).json({ error: '수량은 0보다 커야 합니다' }); }
+    // 공격: quantity=-100으로 sell하면 주식 없이 돈이 들어옴
     
     // [A06: Insecure Design] 주문 금액/수량 제한 없음
     // [A06] Rate limiting 없음 - 과다 주문 가능
